@@ -13,7 +13,7 @@ import { SortField } from './sort-field.type'
 import { Video } from './video.model'
 
 export abstract class AbstractVideoList implements OnInit, OnDestroy {
-  private static LINES_PER_PAGE = 3
+  private static LINES_PER_PAGE = 4
 
   @ViewChild('videosElement') videosElement: ElementRef
   @ViewChild(InfiniteScrollerDirective) infiniteScroller: InfiniteScrollerDirective
@@ -54,7 +54,7 @@ export abstract class AbstractVideoList implements OnInit, OnDestroy {
 
   ngOnInit () {
     // Subscribe to route changes
-    const routeParams = this.route.snapshot.params
+    const routeParams = this.route.snapshot.queryParams
     this.loadRouteParams(routeParams)
 
     this.resizeSubscription = fromEvent(window, 'resize')
@@ -162,11 +162,16 @@ export abstract class AbstractVideoList implements OnInit, OnDestroy {
 
   protected setNewRouteParams () {
     const routeParams = this.buildRouteParams()
-    this.router.navigate([ this.currentRoute, routeParams ])
+    this.router.navigate([ this.currentRoute ], { queryParams: routeParams })
   }
 
   protected buildVideoPages () {
     this.videoPages = Object.values(this.loadedPages)
+  }
+
+  protected buildVideoHeight () {
+    // Same ratios than base width/height
+    return this.videosElement.nativeElement.offsetWidth * (this.baseVideoHeight / this.baseVideoWidth)
   }
 
   private minPageLoaded () {
@@ -183,8 +188,7 @@ export abstract class AbstractVideoList implements OnInit, OnDestroy {
 
       // Video takes all the width
       this.videoWidth = -1
-      // Same ratios than base width/height
-      this.videoHeight = this.videosElement.nativeElement.offsetWidth * (this.baseVideoHeight / this.baseVideoWidth)
+      this.videoHeight = this.buildVideoHeight()
       this.pageHeight = this.pagination.itemsPerPage * this.videoHeight
     } else {
       this.videoWidth = this.baseVideoWidth

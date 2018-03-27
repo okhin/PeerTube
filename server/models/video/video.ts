@@ -203,7 +203,7 @@ enum ScopeNames {
   [ScopeNames.WITH_FILES]: {
     include: [
       {
-        model: () => VideoFileModel,
+        model: () => VideoFileModel.unscoped(),
         required: true
       }
     ]
@@ -211,8 +211,7 @@ enum ScopeNames {
   [ScopeNames.WITH_SHARES]: {
     include: [
       {
-        model: () => VideoShareModel,
-        include: [ () => ActorModel ]
+        model: () => VideoShareModel.unscoped()
       }
     ]
   },
@@ -220,14 +219,25 @@ enum ScopeNames {
     include: [
       {
         model: () => AccountVideoRateModel,
-        include: [ () => AccountModel ]
+        include: [
+          {
+            model: () => AccountModel.unscoped(),
+            required: true,
+            include: [
+              {
+                attributes: [ 'url' ],
+                model: () => ActorModel.unscoped()
+              }
+            ]
+          }
+        ]
       }
     ]
   },
   [ScopeNames.WITH_COMMENTS]: {
     include: [
       {
-        model: () => VideoCommentModel
+        model: () => VideoCommentModel.unscoped()
       }
     ]
   }
@@ -473,7 +483,7 @@ export class VideoModel extends Model<VideoModel> {
 
     return Promise.all(tasks)
       .catch(err => {
-        logger.error('Some errors when removing files of video %s in after destroy hook.', instance.uuid, err)
+        logger.error('Some errors when removing files of video %s in after destroy hook.', instance.uuid, { err })
       })
   }
 
@@ -666,9 +676,23 @@ export class VideoModel extends Model<VideoModel> {
       limit: count,
       order: getSort(sort),
       where: {
-        name: {
-          [Sequelize.Op.iLike]: '%' + value + '%'
-        }
+        [Sequelize.Op.or]: [
+          {
+            name: {
+              [ Sequelize.Op.iLike ]: '%' + value + '%'
+            }
+          },
+          {
+            preferredUsername: Sequelize.where(Sequelize.col('preferredUsername'), {
+              [ Sequelize.Op.iLike ]: '%' + value + '%'
+            })
+          },
+          {
+            host: Sequelize.where(Sequelize.col('host'), {
+              [ Sequelize.Op.iLike ]: '%' + value + '%'
+            })
+          }
+        ]
       }
     }
 
@@ -1114,12 +1138,12 @@ export class VideoModel extends Model<VideoModel> {
       comments: commentsObject,
       attributedTo: [
         {
-          type: 'Group',
-          id: this.VideoChannel.Actor.url
-        },
-        {
           type: 'Person',
           id: this.VideoChannel.Account.Actor.url
+        },
+        {
+          type: 'Group',
+          id: this.VideoChannel.Actor.url
         }
       ]
     }
@@ -1213,7 +1237,7 @@ export class VideoModel extends Model<VideoModel> {
 
     } catch (err) {
       // Auto destruction...
-      this.destroy().catch(err => logger.error('Cannot destruct video after transcoding failure.', err))
+      this.destroy().catch(err => logger.error('Cannot destruct video after transcoding failure.', { err }))
 
       throw err
     }

@@ -23,7 +23,7 @@ export class AccountVideosComponent extends AbstractVideoList implements OnInit,
   checkedVideos: { [ id: number ]: boolean } = {}
   pagination: ComponentPagination = {
     currentPage: 1,
-    itemsPerPage: 10,
+    itemsPerPage: 5,
     totalItems: null
   }
 
@@ -104,6 +104,11 @@ export class AccountVideosComponent extends AbstractVideoList implements OnInit,
 
         error => this.notificationsService.error('Error', error.message)
       )
+  }
+
+  protected buildVideoHeight () {
+    // In account videos, the video height is fixed
+    return this.baseVideoHeight
   }
 
   private spliceVideosById (id: number) {

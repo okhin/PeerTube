@@ -1,3 +1,6 @@
+// FIXME: https://github.com/nodejs/node/pull/16853
+require('tls').DEFAULT_ECDH_CURVE = 'auto'
+
 import * as program from 'commander'
 import { join } from 'path'
 import * as youtubeDL from 'youtube-dl'
@@ -6,6 +9,7 @@ import { unlinkPromise } from '../helpers/core-utils'
 import { doRequestAndSaveToFile } from '../helpers/requests'
 import { CONSTRAINTS_FIELDS } from '../initializers'
 import { getClient, getVideoCategories, login, searchVideo, uploadVideo } from '../tests/utils'
+import { truncate } from 'lodash'
 
 program
   .option('-u, --url <url>', 'Server url')
@@ -133,13 +137,17 @@ async function uploadVideoOnPeerTube (videoInfo: any, videoPath: string, languag
   }
 
   const videoAttributes = {
-    name: videoInfo.title,
+    name: truncate(videoInfo.title, {
+      'length': CONSTRAINTS_FIELDS.VIDEOS.NAME.max,
+      'separator': /,? +/,
+      'omission': ' […]'
+    }),
     category,
     licence,
     language,
     nsfw: isNSFW(videoInfo),
     commentsEnabled: true,
-    description: videoInfo.description,
+    description: videoInfo.description || undefined,
     support: undefined,
     tags,
     privacy: VideoPrivacy.PUBLIC,
